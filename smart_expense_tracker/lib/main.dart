@@ -1,67 +1,129 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-
+import 'package:provider/provider.dart';
+import 'l10n/app_localizations.dart';
+import 'firebase_options.dart';
 import 'models/expense.dart';
-import 'models/user.dart';
+import 'models/person.dart';
+import 'models/debt_record.dart';
 import 'providers/expense_provider.dart';
+import 'providers/debt_provider.dart';
 import 'providers/theme_provider.dart';
-import 'providers/auth_provider.dart';
+import 'widgets/auth_gate.dart';
 
-import 'screens/home_screen.dart';
-import 'screens/add_expense_screen.dart';
-import 'screens/stats_screen.dart';
-import 'screens/login_screen.dart';
-
+// Entry point
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  
+  // Initialize Hive
   await Hive.initFlutter();
-  Hive.registerAdapter(AppUserAdapter());
-  await Hive.openBox<AppUser>('users');
-
+  
+  // Register Hive adapters
   Hive.registerAdapter(ExpenseAdapter());
-
-  await Hive.openBox<Expense>('expenses');
-  await Hive.openBox('settings');
-
-  runApp(const MyApp());
+  Hive.registerAdapter(PersonAdapter());
+  Hive.registerAdapter(DebtRecordAdapter());
+  
+  // Open Hive boxes with error handling
+  try {
+    await Hive.openBox<Expense>('expenses');
+  } catch (e) {
+    await Hive.deleteBoxFromDisk('expenses');
+    await Hive.openBox<Expense>('expenses');
+  }
+  
+  try {
+    await Hive.openBox<Person>('people');
+  } catch (e) {
+    await Hive.deleteBoxFromDisk('people');
+    await Hive.openBox<Person>('people');
+  }
+  
+  try {
+    await Hive.openBox<DebtRecord>('debt_records');
+  } catch (e) {
+    await Hive.deleteBoxFromDisk('debt_records');
+    await Hive.openBox<DebtRecord>('debt_records');
+  }
+  
+  try {
+    await Hive.openBox('settings');
+  } catch (e) {
+    await Hive.deleteBoxFromDisk('settings');
+    await Hive.openBox('settings');
+  }
+  
+  runApp(ExpenseTrackerApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
+class ExpenseTrackerApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => ExpenseProvider()),
+        ChangeNotifierProvider(create: (_) => DebtProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
           return MaterialApp(
-            title: 'Smart Expense Tracker',
-            themeMode: themeProvider.isDarkMode
-                ? ThemeMode.dark
-                : ThemeMode.light,
+            title: 'Expense Tracker',
+            debugShowCheckedModeBanner: false,
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: Locale(themeProvider.language),
             theme: ThemeData(
-              colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-              useMaterial3: true,
-            ),
-            darkTheme: ThemeData.dark().copyWith(
-              colorScheme: ColorScheme.fromSeed(
-                seedColor: Colors.deepPurple,
-                brightness: Brightness.dark,
+              brightness: Brightness.light,
+              primarySwatch: Colors.teal,
+              scaffoldBackgroundColor: Colors.grey.shade50,
+              cardColor: Colors.white,
+              appBarTheme: const AppBarTheme(
+                backgroundColor: Colors.teal,
+                foregroundColor: Colors.white,
+                elevation: 0,
               ),
+              textTheme: GoogleFonts.poppinsTextTheme().apply(
+                bodyColor: Colors.grey.shade800,
+                displayColor: Colors.grey.shade900,
+              ),
+              visualDensity: VisualDensity.adaptivePlatformDensity,
             ),
-            home: AuthGate(),
-            routes: {
-              '/login': (context) => LoginScreen(),
-              '/': (context) => HomeScreen(),
-              '/add': (context) => AddExpenseScreen(),
-              '/stats': (context) => StatsScreen(),
-            },
+            darkTheme: ThemeData(
+              brightness: Brightness.dark,
+              primarySwatch: Colors.teal,
+              scaffoldBackgroundColor: const Color(0xFF121212),
+              cardColor: const Color(0xFF1E1E1E),
+              appBarTheme: const AppBarTheme(
+                backgroundColor: Color(0xFF1E1E1E),
+                foregroundColor: Colors.white,
+                elevation: 0,
+              ),
+              textTheme: GoogleFonts.poppinsTextTheme().apply(
+                bodyColor: Colors.grey.shade200,
+                displayColor: Colors.white,
+              ),
+              bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+                backgroundColor: Color(0xFF1E1E1E),
+                selectedItemColor: Colors.teal,
+                unselectedItemColor: Colors.grey,
+              ),
+              visualDensity: VisualDensity.adaptivePlatformDensity,
+            ),
+            themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+            home: const AuthGate(),
           );
         },
       ),
@@ -69,16 +131,3 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class AuthGate extends StatelessWidget {
-  const AuthGate({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final auth = Provider.of<AuthProvider>(context);
-    if (auth.currentUser == null) {
-      return LoginScreen();
-    } else {
-      return HomeScreen();
-    }
-  }
-}

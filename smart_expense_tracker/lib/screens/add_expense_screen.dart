@@ -69,7 +69,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 onSaved: (value) => _amount = double.tryParse(value!),
               ),
               DropdownButtonFormField<String>(
-                value: _category,
+                initialValue: _category,
                 items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                 decoration: const InputDecoration(labelText: 'Category'),
                 onChanged: (val) => setState(() => _category = val),
@@ -80,7 +80,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 onSaved: (value) => _note = value,
               ),
               DropdownButtonFormField<String>(
-                value: _currency,
+                initialValue: _currency,
                 items: _currencies.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                 decoration: const InputDecoration(labelText: 'Currency'),
                 onChanged: (val) => setState(() => _currency = val!),
