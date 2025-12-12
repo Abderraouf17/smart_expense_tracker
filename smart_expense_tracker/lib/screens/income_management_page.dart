@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/expense_provider.dart';
 import '../providers/theme_provider.dart';
+import '../l10n/app_localizations.dart';
+import '../widgets/common_widgets.dart';
 
 class IncomeManagementPage extends StatefulWidget {
   const IncomeManagementPage({super.key});
@@ -12,10 +14,13 @@ class IncomeManagementPage extends StatefulWidget {
 }
 
 class _IncomeManagementPageState extends State<IncomeManagementPage> {
-  final _amountController = TextEditingController();
-  final _titleController = TextEditingController();
+  final _monthlySalaryController = TextEditingController(); // Specific controller for monthly salary
+  final _otherIncomeAmountController = TextEditingController(); // Controller for other income amount
+  final _otherIncomeTitleController = TextEditingController(); // Controller for other income title
+
   String _incomeType = 'Salary';
   bool _isLoading = false;
+  bool _isEditingSalary = false; // State to manage salary input editability
 
   final List<String> _incomeTypes = [
     'Salary',
@@ -40,23 +45,37 @@ class _IncomeManagementPageState extends State<IncomeManagementPage> {
   };
 
   @override
+  void initState() {
+    super.initState();
+    _loadCurrentMonthlySalary();
+  }
+
+  void _loadCurrentMonthlySalary() {
+    final provider = context.read<ExpenseProvider>();
+    _monthlySalaryController.text = provider.totalIncome.toStringAsFixed(2); // Display current income as salary initially
+  }
+
+  @override
   void dispose() {
-    _amountController.dispose();
-    _titleController.dispose();
+    _monthlySalaryController.dispose();
+    _otherIncomeAmountController.dispose();
+    _otherIncomeTitleController.dispose();
     super.dispose();
   }
 
-  void _addIncome() async {
-    final amount = double.tryParse(_amountController.text.trim());
-    final title = _titleController.text.trim();
+  void _addOtherIncome() async {
+    final l10n = AppLocalizations.of(context)!;
+    final amountText = _otherIncomeAmountController.text.trim();
+    final title = _otherIncomeTitleController.text.trim();
 
-    if (amount == null || amount <= 0) {
-      _showErrorSnackBar('Please enter a valid amount');
+    if (amountText.isEmpty || title.isEmpty) {
+      _showErrorSnackBar(l10n.enterAmountTitle);
       return;
     }
-
-    if (title.isEmpty) {
-      _showErrorSnackBar('Please enter income title');
+    
+    final amount = double.tryParse(amountText);
+    if (amount == null || amount <= 0) {
+      _showErrorSnackBar(l10n.enterValidAmount);
       return;
     }
 
@@ -69,24 +88,31 @@ class _IncomeManagementPageState extends State<IncomeManagementPage> {
       
       if (!mounted) return;
       final currencySymbol = context.read<ThemeProvider>().getCurrencySymbol();
-      _showSuccessSnackBar('💰 Income added: $currencySymbol${amount.toStringAsFixed(2)}');
+      _showSuccessSnackBar('${l10n.incomeAdded}: $currencySymbol${amount.toStringAsFixed(2)}');
       
-      _amountController.clear();
-      _titleController.clear();
+      _otherIncomeAmountController.clear();
+      _otherIncomeTitleController.clear();
       setState(() => _incomeType = 'Salary');
       
     } catch (e) {
-      _showErrorSnackBar('Failed to add income. Please try again.');
+      _showErrorSnackBar('${l10n.failedToAddIncome} $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _setMonthlySalary() async {
-    final amount = double.tryParse(_amountController.text.trim());
+  void _updateMonthlySalary() async {
+    final l10n = AppLocalizations.of(context)!;
+    final amountText = _monthlySalaryController.text.trim();
 
+    if (amountText.isEmpty) {
+      _showErrorSnackBar(l10n.enterSalaryAmount);
+      return;
+    }
+    
+    final amount = double.tryParse(amountText);
     if (amount == null || amount <= 0) {
-      _showErrorSnackBar('Please enter a valid salary amount');
+      _showErrorSnackBar(l10n.enterValidSalary);
       return;
     }
 
@@ -97,13 +123,12 @@ class _IncomeManagementPageState extends State<IncomeManagementPage> {
       
       if (!mounted) return;
       final currencySymbol = context.read<ThemeProvider>().getCurrencySymbol();
-      _showSuccessSnackBar('💼 Monthly salary set: $currencySymbol${amount.toStringAsFixed(2)}');
+      _showSuccessSnackBar('${l10n.monthlySalarySet}: $currencySymbol${amount.toStringAsFixed(2)}');
       
-      _amountController.clear();
-      _titleController.clear();
+      setState(() => _isEditingSalary = false); // Disable editing after saving
       
     } catch (e) {
-      _showErrorSnackBar('Failed to set salary. Please try again.');
+      _showErrorSnackBar('${l10n.failedToSetSalary} $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -147,14 +172,15 @@ class _IncomeManagementPageState extends State<IncomeManagementPage> {
   Widget build(BuildContext context) {
     return Consumer2<ExpenseProvider, ThemeProvider>(
       builder: (context, expenseProvider, themeProvider, child) {
+        final l10n = AppLocalizations.of(context)!;
         final isDark = themeProvider.isDarkMode;
         final currencySymbol = themeProvider.getCurrencySymbol();
         final currentIncome = expenseProvider.totalIncome;
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Income Management'),
-            backgroundColor: Colors.teal,
+            title: Text(l10n.incomeManagement),
+            backgroundColor: const Color(0xFF1E2E4F), // Navy
           ),
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
@@ -166,8 +192,8 @@ class _IncomeManagementPageState extends State<IncomeManagementPage> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.green.shade400, Colors.teal.shade600],
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF1E2E4F), Color(0xFF69B39C)], // Navy to Teal
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -176,11 +202,11 @@ class _IncomeManagementPageState extends State<IncomeManagementPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Row(
+                      Row(
                         children: [
-                          Icon(Icons.account_balance_wallet, color: Colors.white, size: 24),
-                          SizedBox(width: 8),
-                          Text('Current Total Income', style: TextStyle(color: Colors.white70, fontSize: 16)),
+                          const Icon(Icons.account_balance_wallet, color: Colors.white, size: 24),
+                          const SizedBox(width: 8),
+                          Text(l10n.currentTotalIncome, style: const TextStyle(color: Colors.white70, fontSize: 16)),
                         ],
                       ),
                       const SizedBox(height: 8),
@@ -199,7 +225,7 @@ class _IncomeManagementPageState extends State<IncomeManagementPage> {
 
                 // Set Monthly Salary Section
                 Text(
-                  'Set Monthly Salary',
+                  l10n.setMonthlySalary,
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -208,42 +234,72 @@ class _IncomeManagementPageState extends State<IncomeManagementPage> {
                 ),
                 const SizedBox(height: 16),
                 TextField(
-                  controller: _amountController,
+                  controller: _monthlySalaryController,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [
                     FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                   ],
+                  readOnly: !_isEditingSalary, // Make read-only when not editing
+                  style: TextStyle(color: isDark ? Colors.white : Colors.black87), // Ensure text color is visible
                   decoration: InputDecoration(
-                    labelText: 'Monthly Salary Amount',
+                    labelText: l10n.monthlySalaryAmount,
                     prefixText: currencySymbol,
-                    prefixIcon: const Icon(Icons.work),
+                    prefixIcon: Icon(Icons.work, color: isDark ? Colors.white70 : Colors.grey.shade600),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     filled: true,
                     fillColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade50,
                   ),
                 ),
                 const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _isLoading ? null : _setMonthlySalary,
-                    icon: _isLoading 
-                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Icon(Icons.save),
-                    label: Text(_isLoading ? 'Setting...' : 'Set Monthly Salary'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue.shade600,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    if (!_isEditingSalary)
+                      ElevatedButton.icon(
+                        onPressed: () => setState(() => _isEditingSalary = true),
+                        icon: const Icon(Icons.edit, color: Colors.white),
+                        label: Text(l10n.update, style: const TextStyle(color: Colors.white)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue.shade600,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                        ),
+                      ),
+                    if (_isEditingSalary) ...[
+                      ElevatedButton(
+                        onPressed: () => setState(() {
+                          _isEditingSalary = false;
+                          _loadCurrentMonthlySalary(); // Revert changes
+                        }),
+                        child: Text(l10n.cancel),
+                        style: ElevatedButton.styleFrom(
+                          foregroundColor: isDark ? Colors.white : Colors.black87,
+                          backgroundColor: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton.icon(
+                        onPressed: _isLoading ? null : _updateMonthlySalary,
+                        icon: _isLoading 
+                            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            : const Icon(Icons.save, color: Colors.white),
+                        label: Text(_isLoading ? l10n.setting : l10n.save, style: const TextStyle(color: Colors.white)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1E2E4F), // Navy
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 30),
 
                 // Add Other Income Section
                 Text(
-                  'Add Other Income',
+                  l10n.addOtherIncome,
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -252,10 +308,28 @@ class _IncomeManagementPageState extends State<IncomeManagementPage> {
                 ),
                 const SizedBox(height: 16),
                 TextField(
-                  controller: _titleController,
+                  controller: _otherIncomeTitleController,
+                  style: TextStyle(color: isDark ? Colors.white : Colors.black87),
                   decoration: InputDecoration(
-                    labelText: 'Income Title',
-                    prefixIcon: const Icon(Icons.title),
+                    labelText: l10n.incomeTitle,
+                    prefixIcon: Icon(Icons.title, color: isDark ? Colors.white70 : Colors.grey.shade600),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    filled: true,
+                    fillColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade50,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField( // Amount field for other income
+                  controller: _otherIncomeAmountController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                  ],
+                  style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                  decoration: InputDecoration(
+                    labelText: l10n.amount,
+                    prefixText: currencySymbol,
+                    prefixIcon: Icon(Icons.attach_money, color: isDark ? Colors.white70 : Colors.grey.shade600),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     filled: true,
                     fillColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade50,
@@ -264,9 +338,11 @@ class _IncomeManagementPageState extends State<IncomeManagementPage> {
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
                   value: _incomeType,
+                  style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                  dropdownColor: isDark ? const Color(0xFF2A2A2A) : Colors.white,
                   decoration: InputDecoration(
-                    labelText: 'Income Type',
-                    prefixIcon: Icon(_incomeIcons[_incomeType]),
+                    labelText: l10n.incomeType,
+                    prefixIcon: Icon(_incomeIcons[_incomeType], color: isDark ? Colors.white70 : Colors.grey.shade600),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     filled: true,
                     fillColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade50,
@@ -275,7 +351,7 @@ class _IncomeManagementPageState extends State<IncomeManagementPage> {
                     value: type,
                     child: Row(
                       children: [
-                        Icon(_incomeIcons[type], size: 20),
+                        Icon(_incomeIcons[type], size: 20, color: isDark ? Colors.white70 : Colors.grey.shade600),
                         const SizedBox(width: 12),
                         Text(type),
                       ],
@@ -289,16 +365,15 @@ class _IncomeManagementPageState extends State<IncomeManagementPage> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: _isLoading ? null : _addIncome,
+                    onPressed: _isLoading ? null : _addOtherIncome,
                     icon: _isLoading 
-                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Icon(Icons.add),
-                    label: Text(_isLoading ? 'Adding...' : 'Add Income'),
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.add, color: Colors.white),
+                    label: Text(_isLoading ? l10n.adding : l10n.addIncome, style: const TextStyle(color: Colors.white)),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green.shade600,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: const Color(0xFF69B39C), // Teal
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
                   ),
                 ),

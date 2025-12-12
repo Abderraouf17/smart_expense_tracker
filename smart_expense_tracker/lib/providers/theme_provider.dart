@@ -4,7 +4,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 class ThemeProvider with ChangeNotifier {
   bool _isDarkMode = false;
   String _language = 'en';
-  String _currency = 'USD';
+  String _currency = 'SAR';
 
   bool get isDarkMode => _isDarkMode;
   String get language => _language;
@@ -23,7 +23,7 @@ class ThemeProvider with ChangeNotifier {
     final box = Hive.box('settings');
     _isDarkMode = box.get('darkMode', defaultValue: false);
     _language = box.get('language', defaultValue: 'en');
-    _currency = box.get('currency', defaultValue: 'USD');
+    _currency = box.get('currency', defaultValue: 'SAR');
     notifyListeners();
   }
 
@@ -49,14 +49,45 @@ class ThemeProvider with ChangeNotifier {
   }
 
   String getCurrencySymbol() {
+    // For Arabic language, use Arabic symbols regardless of currency type
+    if (_language == 'ar') {
+      switch (_currency) {
+        case 'SAR':
+          return 'ر.س';
+        case 'DZD':
+          return 'د.ج';
+        case 'MAD':
+          return 'د.م';
+        case 'EUR':
+          return 'يورو';
+        case 'GBP':
+          return 'جنيه';
+        case 'JPY':
+          return 'ين';
+        case 'USD':
+          return 'دولار';
+        default:
+          return 'ر.س';
+      }
+    }
+    // For English language, use standard symbols
     switch (_currency) {
-      case 'SAR': return 'ر.س';
-      case 'DZD': return 'د.ج';
-      case 'MAD': return 'د.م';
-      case 'EUR': return '€';
-      case 'GBP': return '£';
-      case 'JPY': return '¥';
-      default: return '\$';
+      case 'SAR':
+        return 'SAR';
+      case 'DZD':
+        return 'DZD';
+      case 'MAD':
+        return 'MAD';
+      case 'EUR':
+        return '€';
+      case 'GBP':
+        return '£';
+      case 'JPY':
+        return '¥';
+      case 'USD':
+        return '\$';
+      default:
+        return '\$';
     }
   }
 }

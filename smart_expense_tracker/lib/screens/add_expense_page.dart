@@ -1,9 +1,12 @@
+import 'dart:ui'; // Ensure this import is present
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../widgets/common_widgets.dart';
 import '../providers/expense_provider.dart';
 import '../models/expense.dart';
+import '../utils/constants.dart';
+import '../l10n/app_localizations.dart'; // Import localization
 
 class AddExpensePage extends StatefulWidget {
   const AddExpensePage({super.key});
@@ -22,52 +25,6 @@ class _AddExpensePageState extends State<AddExpensePage>
 
   late AnimationController _modalController;
   late Animation<double> _scaleAnimation;
-
-  final Map<String, IconData> categoryIcons = const {
-    'Food & Dining': Icons.restaurant,
-    'Transportation': Icons.directions_car,
-    'Bills & Utilities': Icons.receipt_long,
-    'Shopping': Icons.shopping_bag,
-    'Entertainment': Icons.movie,
-    'Healthcare': Icons.local_hospital,
-    'Education': Icons.school,
-    'Groceries': Icons.local_grocery_store,
-    'Fuel & Gas': Icons.local_gas_station,
-    'Coffee & Drinks': Icons.local_cafe,
-    'Fitness & Gym': Icons.fitness_center,
-    'Beauty & Personal Care': Icons.face_retouching_natural,
-    'Travel': Icons.flight,
-    'Home & Garden': Icons.home,
-    'Technology': Icons.devices,
-    'Clothing': Icons.checkroom,
-    'Gifts & Donations': Icons.card_giftcard,
-    'Insurance': Icons.security,
-    'Subscriptions': Icons.subscriptions,
-    'Other': Icons.more_horiz,
-  };
-
-  final Map<String, Color> categoryColors = {
-    'Food & Dining': Colors.orange,
-    'Transportation': Colors.blue,
-    'Bills & Utilities': Colors.amber.shade700,
-    'Shopping': Colors.purple,
-    'Entertainment': Colors.pink,
-    'Healthcare': Colors.red,
-    'Education': Colors.indigo,
-    'Groceries': Colors.green,
-    'Fuel & Gas': Colors.grey.shade700,
-    'Coffee & Drinks': Colors.brown,
-    'Fitness & Gym': Colors.teal,
-    'Beauty & Personal Care': Colors.pinkAccent,
-    'Travel': Colors.cyan,
-    'Home & Garden': Colors.lightGreen,
-    'Technology': Colors.deepPurple,
-    'Clothing': Colors.deepOrange,
-    'Gifts & Donations': Colors.lime,
-    'Insurance': Colors.blueGrey,
-    'Subscriptions': Colors.indigo.shade300,
-    'Other': Colors.grey,
-  };
 
   @override
   void initState() {
@@ -88,17 +45,18 @@ class _AddExpensePageState extends State<AddExpensePage>
   }
 
   void _saveExpense() async {
+    final l10n = AppLocalizations.of(context)!;
     final amountText = _amountController.text.trim();
     final notes = _notesController.text.trim();
     
     if (amountText.isEmpty || _selectedCategory == null) {
-      _showErrorSnackBar('Please enter amount and select category');
+      _showErrorSnackBar(l10n.enterAmountCategory);
       return;
     }
     
     final amount = double.tryParse(amountText);
     if (amount == null || amount <= 0) {
-      _showErrorSnackBar('Please enter a valid amount');
+      _showErrorSnackBar(l10n.enterValidAmount);
       return;
     }
     
@@ -109,17 +67,17 @@ class _AddExpensePageState extends State<AddExpensePage>
       category: _selectedCategory!,
       note: notes.isEmpty ? _selectedCategory! : notes,
       date: DateTime.now(),
-      currency: 'USD',
+      currency: 'SAR', // Use default SAR
     );
     
     try {
       await context.read<ExpenseProvider>().addExpense(expense);
       if (!mounted) return;
-      _showSuccessSnackBar('💰 Expense added successfully!');
+      _showSuccessSnackBar(l10n.expenseAdded);
       await Future.delayed(const Duration(milliseconds: 500));
       Navigator.of(context).pop();
     } catch (e) {
-      _showErrorSnackBar('Failed to save expense. Please try again.');
+      _showErrorSnackBar('${l10n.failedToSaveExpense} $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -160,32 +118,37 @@ class _AddExpensePageState extends State<AddExpensePage>
   }
 
   Widget _buildCategoryDropdown() {
+    final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         DropdownButtonFormField<String>(
           isExpanded: true,
           decoration: InputDecoration(
-            labelText: 'Category *',
+            labelText: l10n.category,
             filled: true,
-            fillColor: Colors.white,
+            fillColor: isDark ? Colors.white.withOpacity(0.1) : Colors.white,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(25)),
             prefixIcon: Icon(
               _selectedCategory != null
-                  ? categoryIcons[_selectedCategory!] ?? Icons.category
+                  ? CategoryConstants.getIcon(_selectedCategory!)
                   : Icons.category_outlined,
               color: _selectedCategory != null
-                  ? categoryColors[_selectedCategory!] ?? Colors.grey
+                  ? CategoryConstants.getColor(_selectedCategory!)
                   : Colors.grey,
             ),
           ),
           value: _selectedCategory,
-          items: categoryIcons.keys
+          dropdownColor: isDark ? const Color(0xFF2A2A2A) : Colors.white,
+          items: CategoryConstants.icons.keys
               .map((category) => DropdownMenuItem(
                     value: category,
                     child: Text(
                       category,
                       overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: isDark ? Colors.white : Colors.black87),
                     ),
                   ))
               .toList(),
@@ -200,7 +163,7 @@ class _AddExpensePageState extends State<AddExpensePage>
           height: 120,
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
+            color: isDark ? Colors.white.withOpacity(0.05) : Colors.white.withOpacity(0.1),
             borderRadius: BorderRadius.circular(15),
           ),
           child: GridView.builder(
@@ -209,42 +172,31 @@ class _AddExpensePageState extends State<AddExpensePage>
               mainAxisSpacing: 8,
               crossAxisSpacing: 8,
             ),
-            itemCount: 10,
+            itemCount: CategoryConstants.icons.keys.length, // Use all categories
             itemBuilder: (context, index) {
-              final commonCategories = [
-                'Food & Dining',
-                'Coffee & Drinks', 
-                'Transportation',
-                'Groceries',
-                'Shopping',
-                'Bills & Utilities',
-                'Entertainment',
-                'Healthcare',
-                'Fuel & Gas',
-                'Other'
-              ];
-              final categoryName = commonCategories[index];
-              final entry = MapEntry(categoryName, categoryIcons[categoryName]!);
-              final isSelected = _selectedCategory == entry.key;
+              final categoryName = CategoryConstants.icons.keys.elementAt(index);
+              final icon = CategoryConstants.getIcon(categoryName);
+              final color = CategoryConstants.getColor(categoryName);
+              final isSelected = _selectedCategory == categoryName;
               return GestureDetector(
                 onTap: () {
                   setState(() {
-                    _selectedCategory = entry.key;
+                    _selectedCategory = categoryName;
                   });
                 },
                 child: Container(
                   decoration: BoxDecoration(
                     color: isSelected 
-                        ? categoryColors[entry.key]?.withOpacity(0.3)
-                        : Colors.white.withOpacity(0.1),
+                        ? color.withOpacity(0.3)
+                        : (isDark ? Colors.white.withOpacity(0.1) : Colors.grey.shade100),
                     borderRadius: BorderRadius.circular(8),
                     border: isSelected 
-                        ? Border.all(color: categoryColors[entry.key]!, width: 2)
+                        ? Border.all(color: color, width: 2)
                         : null,
                   ),
                   child: Icon(
-                    entry.value,
-                    color: categoryColors[entry.key],
+                    icon,
+                    color: color,
                     size: 24,
                   ),
                 ),
@@ -258,108 +210,143 @@ class _AddExpensePageState extends State<AddExpensePage>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Consistent Navy/Teal Gradient
+    final gradientColors = [
+      const Color(0xFF1E2E4F), // Navy
+      const Color(0xFF69B39C), // Teal
+    ];
+
     return Scaffold(
-      backgroundColor: Colors.black54,
-      body: Center(
-        child: ScaleTransition(
-          scale: _scaleAnimation,
-          child: Container(
-            width: MediaQuery.of(context).size.width - 40,
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.8,
-            ),
-            margin: const EdgeInsets.symmetric(horizontal: 20),
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.teal.shade200, Colors.blue.shade200],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(30),
-              boxShadow: const [
-                BoxShadow(color: Colors.black26, blurRadius: 20, offset: Offset(0, 8))
-              ],
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    'Add Expense',
-                    style: TextStyle(
-                        fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white),
-                  ),
-                  const SizedBox(height: 20),
-                  TextField(
-                    controller: _amountController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                    ],
-                    style: const TextStyle(color: Colors.white, fontSize: 18),
-                    decoration: InputDecoration(
-                      labelText: 'Amount *',
-                      labelStyle: const TextStyle(color: Colors.white70),
-                      prefixIcon: const Icon(Icons.attach_money, color: Colors.white70),
-                      filled: true,
-                      fillColor: Colors.white.withOpacity(0.1),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(25),
-                        borderSide: const BorderSide(color: Colors.white30),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(25),
-                        borderSide: const BorderSide(color: Colors.white30),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(25),
-                        borderSide: const BorderSide(color: Colors.white, width: 2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildCategoryDropdown(),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _notesController,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      labelText: 'Notes (Optional)',
-                      labelStyle: const TextStyle(color: Colors.white70),
-                      prefixIcon: const Icon(Icons.note_alt_outlined, color: Colors.white70),
-                      filled: true,
-                      fillColor: Colors.white.withOpacity(0.1),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(25),
-                        borderSide: const BorderSide(color: Colors.white30),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(25),
-                        borderSide: const BorderSide(color: Colors.white30),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(25),
-                        borderSide: const BorderSide(color: Colors.white, width: 2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  GradientButton(
-                    text: _isLoading ? 'Saving...' : 'Save',
-                    gradient: LinearGradient(
-                      colors: _isLoading 
-                          ? [Colors.grey.shade400, Colors.grey.shade600]
-                          : [Colors.green.shade400, Colors.teal.shade600],
-                    ),
-                    onPressed: _isLoading ? () {} : _saveExpense,
-                    borderRadius: 25,
-                  ),
-                ],
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        children: [
+          // Blur Background with Dismissal
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+              child: Container(
+                color: Colors.black.withOpacity(0.2),
               ),
             ),
           ),
-        ),
+          // Content
+          Center(
+            child: ScaleTransition(
+              scale: _scaleAnimation,
+              child: GestureDetector(
+                onTap: () {}, // Prevent dismissal when tapping content
+                child: Container(
+                  width: MediaQuery.of(context).size.width - 40,
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.8,
+                  ),
+                  margin: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: gradientColors,
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black26, blurRadius: 20, offset: Offset(0, 8))
+                    ],
+                  ),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              l10n.addExpense,
+                              style: const TextStyle(
+                                  fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close, color: Colors.white),
+                              onPressed: () => Navigator.pop(context),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        TextField(
+                          controller: _amountController,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                          ],
+                          style: const TextStyle(color: Colors.white, fontSize: 18),
+                          decoration: InputDecoration(
+                            labelText: l10n.amount,
+                            labelStyle: const TextStyle(color: Colors.white70),
+                            prefixIcon: const Icon(Icons.attach_money, color: Colors.white70),
+                            filled: true,
+                            fillColor: Colors.white.withOpacity(0.1),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(25),
+                              borderSide: const BorderSide(color: Colors.white30),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(25),
+                              borderSide: const BorderSide(color: Colors.white30),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(25),
+                              borderSide: const BorderSide(color: Colors.white, width: 2),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        _buildCategoryDropdown(),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: _notesController,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: InputDecoration(
+                            labelText: l10n.notes,
+                            labelStyle: const TextStyle(color: Colors.white70),
+                            prefixIcon: const Icon(Icons.note_alt_outlined, color: Colors.white70),
+                            filled: true,
+                            fillColor: Colors.white.withOpacity(0.1),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(25),
+                              borderSide: const BorderSide(color: Colors.white30),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(25),
+                              borderSide: const BorderSide(color: Colors.white30),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(25),
+                              borderSide: const BorderSide(color: Colors.white, width: 2),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        GradientButton(
+                          text: _isLoading ? '${l10n.saving}...' : l10n.save,
+                          gradient: LinearGradient(
+                            colors: _isLoading 
+                                ? [Colors.grey.shade400, Colors.grey.shade600]
+                                : [Colors.white24, Colors.white10], // Subtle difference for button on gradient
+                          ),
+                          onPressed: _isLoading ? () {} : _saveExpense,
+                          borderRadius: 25,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

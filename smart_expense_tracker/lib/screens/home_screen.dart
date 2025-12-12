@@ -46,7 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
             margin: const EdgeInsets.all(16),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.deepPurple.shade100,
+              color: Colors.teal.shade100,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -58,9 +58,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 Text(
                   expenseProvider.totalSpent.toStringAsFixed(2),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 20,
-                    color: Colors.deepPurple,
+                    color: Colors.teal.shade800,
                   ),
                 ),
               ],

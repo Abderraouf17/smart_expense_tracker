@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/debt_provider.dart';
@@ -117,188 +118,215 @@ class _AddDebtRecordScreenState extends State<AddDebtRecordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black54,
-      body: Center(
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 20),
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.purple.shade200, Colors.blue.shade200],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        children: [
+          // Blur Background with Dismissal
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+              child: Container(
+                color: Colors.black.withOpacity(0.2),
+              ),
             ),
-            borderRadius: BorderRadius.circular(30),
-            boxShadow: const [
-              BoxShadow(color: Colors.black26, blurRadius: 20, offset: Offset(0, 8))
-            ],
           ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Add Debt Record',
-                  style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+          // Content
+          Center(
+            child: GestureDetector(
+              onTap: () {}, // Prevent dismissal
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF1E2E4F), Color(0xFF69B39C)], // Navy to Teal
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: const [
+                    BoxShadow(color: Colors.black26, blurRadius: 20, offset: Offset(0, 8))
+                  ],
                 ),
-                const SizedBox(height: 20),
-                // Person Selection
-                if (_selectedPerson == null)
-                  Consumer<DebtProvider>(
-                    builder: (context, debtProvider, child) {
-                      return DropdownButtonFormField<Person>(
-                        decoration: InputDecoration(
-                          labelText: 'Select Person',
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(25)),
-                          prefixIcon: const Icon(Icons.person),
-                        ),
-                        value: _selectedPerson,
-                        items: debtProvider.people
-                            .map((person) => DropdownMenuItem(
-                                  value: person,
-                                  child: Text(person.name),
-                                ))
-                            .toList(),
-                        onChanged: (person) => setState(() => _selectedPerson = person),
-                      );
-                    },
-                  )
-                else
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.person),
-                        const SizedBox(width: 16),
-                        Text(_selectedPerson!.name, style: const TextStyle(fontSize: 16)),
-                      ],
-                    ),
-                  ),
-                const SizedBox(height: 16),
-                AnimatedInputField(
-                  labelText: 'Amount',
-                  controller: _amountController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  prefixIcon: const Icon(Icons.attach_money, color: Colors.white70),
-                ),
-                const SizedBox(height: 16),
-                // Record Type Selection
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(25),
-                  ),
-                  child: Row(
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => setState(() => _recordType = 'debt'),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            decoration: BoxDecoration(
-                              color: _recordType == 'debt' ? Colors.red.shade400 : Colors.transparent,
-                              borderRadius: BorderRadius.circular(20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Add Debt Record',
+                            style: TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
                             ),
-                            child: Text(
-                              'Debt',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: _recordType == 'debt' ? Colors.white : Colors.black,
-                                fontWeight: FontWeight.bold,
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      // Person Selection
+                      if (_selectedPerson == null)
+                        Consumer<DebtProvider>(
+                          builder: (context, debtProvider, child) {
+                            return DropdownButtonFormField<Person>(
+                              decoration: InputDecoration(
+                                labelText: 'Select Person',
+                                filled: true,
+                                fillColor: Colors.white,
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(25)),
+                                prefixIcon: const Icon(Icons.person),
+                              ),
+                              value: _selectedPerson,
+                              items: debtProvider.people
+                                  .map((person) => DropdownMenuItem(
+                                        value: person,
+                                        child: Text(person.name),
+                                      ))
+                                  .toList(),
+                              onChanged: (person) => setState(() => _selectedPerson = person),
+                            );
+                          },
+                        )
+                      else
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(25),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.person),
+                              const SizedBox(width: 16),
+                              Text(_selectedPerson!.name, style: const TextStyle(fontSize: 16)),
+                            ],
+                          ),
+                        ),
+                      const SizedBox(height: 16),
+                      AnimatedInputField(
+                        labelText: 'Amount',
+                        controller: _amountController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        prefixIcon: const Icon(Icons.attach_money, color: Colors.white70),
+                      ),
+                      const SizedBox(height: 16),
+                      // Record Type Selection
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(25),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () => setState(() => _recordType = 'debt'),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: _recordType == 'debt' ? Colors.red.shade400 : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    'Debt',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: _recordType == 'debt' ? Colors.white : Colors.black,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () => setState(() => _recordType = 'payback'),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: _recordType == 'payback' ? Colors.green.shade400 : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    'Payback',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: _recordType == 'payback' ? Colors.white : Colors.black,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // Date Selection
+                      GestureDetector(
+                        onTap: _selectDate,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(25),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.calendar_today),
+                              const SizedBox(width: 16),
+                              Text('${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}'),
+                            ],
                           ),
                         ),
                       ),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => setState(() => _recordType = 'payback'),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            decoration: BoxDecoration(
-                              color: _recordType == 'payback' ? Colors.green.shade400 : Colors.transparent,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              'Payback',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: _recordType == 'payback' ? Colors.white : Colors.black,
-                                fontWeight: FontWeight.bold,
+                      const SizedBox(height: 16),
+                      AnimatedInputField(
+                        labelText: 'Note (optional)',
+                        controller: _noteController,
+                        prefixIcon: const Icon(Icons.note, color: Colors.white70),
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: GradientButton(
+                              text: 'Cancel',
+                              gradient: LinearGradient(
+                                colors: [Colors.grey.shade400, Colors.grey.shade600],
                               ),
+                              onPressed: () => Navigator.pop(context),
+                              borderRadius: 25,
                             ),
                           ),
-                        ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: GradientButton(
+                              text: 'Save',
+                              gradient: const LinearGradient(
+                                colors: [Colors.white24, Colors.white10],
+                              ),
+                              onPressed: _saveRecord,
+                              borderRadius: 25,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
-                // Date Selection
-                GestureDetector(
-                  onTap: _selectDate,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.calendar_today),
-                        const SizedBox(width: 16),
-                        Text('${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}'),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                AnimatedInputField(
-                  labelText: 'Note (optional)',
-                  controller: _noteController,
-                  prefixIcon: const Icon(Icons.note, color: Colors.white70),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: GradientButton(
-                        text: 'Cancel',
-                        gradient: LinearGradient(
-                          colors: [Colors.grey.shade400, Colors.grey.shade600],
-                        ),
-                        onPressed: () => Navigator.pop(context),
-                        borderRadius: 25,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: GradientButton(
-                        text: 'Save',
-                        gradient: LinearGradient(
-                          colors: [Colors.green.shade400, Colors.teal.shade600],
-                        ),
-                        onPressed: _saveRecord,
-                        borderRadius: 25,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

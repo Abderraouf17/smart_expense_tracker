@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../widgets/common_widgets.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../providers/theme_provider.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -164,16 +166,19 @@ class _SignUpScreenState extends State<SignUpScreen>
     super.dispose();
   }
 
-  Widget _iconForField(String field) {
+  Widget _iconForField(String field, bool isDark) {
+    final color = isDark ? Colors.white70 : const Color(0xFF1E2E4F); // Navy or White
+    final accentColor = isDark ? Colors.tealAccent : const Color(0xFF69B39C); // Teal
+
     switch (field) {
       case 'Full Name':
-        return const Icon(Icons.person_outline, color: Color(0xFF667eea));
+        return Icon(Icons.person_outline, color: color); 
       case 'Email':
-        return const Icon(Icons.email_outlined, color: Color(0xFF764ba2));
+        return Icon(Icons.email_outlined, color: color); 
       case 'Password':
-        return const Icon(Icons.lock_outline, color: Color(0xFF6B73FF));
+        return Icon(Icons.lock_outline, color: color); 
       case 'Confirm Password':
-        return const Icon(Icons.lock_outline, color: Color(0xFF9C27B0));
+        return Icon(Icons.lock_outline, color: accentColor); 
       default:
         return const SizedBox();
     }
@@ -181,15 +186,23 @@ class _SignUpScreenState extends State<SignUpScreen>
 
   @override
   Widget build(BuildContext context) {
-    final gradientColors = [
-      const Color(0xFF6B73FF),
-      const Color(0xFF9C27B0),
-      const Color(0xFF667eea)
-    ];
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+
+    // New Theme Gradients
+    final gradientColors = isDark 
+      ? [const Color(0xFF1E2E4F), const Color(0xFF121212)] 
+      : [
+          const Color(0xFF69B39C), // Teal
+          const Color(0xFF456B9C), // Lighter Navy
+          const Color(0xFF1E2E4F)  // Navy
+        ];
 
     return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF121212) : Colors.white,
       body: Stack(
         children: [
+          Container(color: isDark ? const Color(0xFF121212) : Colors.white),
           AnimatedOpacity(
             duration: const Duration(milliseconds: 200),
             opacity: MediaQuery.of(context).viewInsets.bottom > 0 ? 0.0 : 1.0,
@@ -197,51 +210,111 @@ class _SignUpScreenState extends State<SignUpScreen>
           ),
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 40),
+              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 10),
               child: SingleChildScrollView(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center, // Center Align
                   children: [
+                    // Top Bar (Settings)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Language Dropdown
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.white10 : Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: themeProvider.language,
+                              dropdownColor: isDark ? const Color(0xFF2A2A2A) : Colors.white,
+                              icon: Icon(Icons.language, color: isDark ? Colors.white70 : Colors.white),
+                              style: TextStyle(
+                                color: isDark ? Colors.white : const Color(0xFF1E2E4F),
+                                fontWeight: FontWeight.bold
+                              ),
+                              items: const [
+                                DropdownMenuItem(value: 'en', child: Text('EN')),
+                                DropdownMenuItem(value: 'ar', child: Text('AR')),
+                              ],
+                              onChanged: (val) {
+                                if (val != null) themeProvider.setLanguage(val);
+                              },
+                            ),
+                          ),
+                        ),
+                        // Theme Toggle
+                        IconButton(
+                          onPressed: themeProvider.toggleTheme,
+                          icon: Icon(
+                            isDark ? Icons.light_mode : Icons.dark_mode,
+                            color: isDark ? Colors.yellow : Colors.white,
+                          ),
+                          style: IconButton.styleFrom(
+                            backgroundColor: isDark ? Colors.white10 : Colors.white.withOpacity(0.2),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    
+                     // LOGO
+                    Image.asset(
+                      'assets/images/logo.png',
+                      height: 100,
+                    ),
+                    const SizedBox(height: 20),
                     Text(
                       'Create Your Account',
                       style: TextStyle(
-                        fontSize: 32,
+                        fontSize: 28, // Slightly smaller
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                        color: isDark ? Colors.white : Colors.black87,
                         shadows: [
                           Shadow(
-                            color: Colors.blue.withOpacity(0.3),
+                            color: const Color(0xFF1E2E4F).withOpacity(0.3),
                             blurRadius: 10,
                             offset: const Offset(0, 3),
                           )
                         ],
                       ),
                     ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Join us and start saving',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                     const SizedBox(height: 30),
                     AnimatedInputField(
                       labelText: 'Full Name',
                       controller: _fullNameController,
-                      prefixIcon: _iconForField('Full Name'),
+                      prefixIcon: _iconForField('Full Name', isDark),
                     ),
                     const SizedBox(height: 20),
                     AnimatedInputField(
                       labelText: 'Email',
                       controller: _emailController,
-                      prefixIcon: _iconForField('Email'),
+                      prefixIcon: _iconForField('Email', isDark),
                       keyboardType: TextInputType.emailAddress,
                     ),
                     const SizedBox(height: 20),
                     AnimatedInputField(
                       labelText: 'Password',
                       controller: _passwordController,
-                      prefixIcon: _iconForField('Password'),
+                      prefixIcon: _iconForField('Password', isDark),
                       obscureText: true,
                     ),
                     const SizedBox(height: 20),
                     AnimatedInputField(
                       labelText: 'Confirm Password',
                       controller: _confirmController,
-                      prefixIcon: _iconForField('Confirm Password'),
+                      prefixIcon: _iconForField('Confirm Password', isDark),
                       obscureText: true,
                     ),
                     const SizedBox(height: 40),
@@ -258,15 +331,15 @@ class _SignUpScreenState extends State<SignUpScreen>
                             borderRadius: BorderRadius.circular(30),
                             gradient: const LinearGradient(
                               colors: [
-                                Color(0xFF6B73FF),
-                                Color(0xFF9C27B0),
+                                Color(0xFF69B39C), // Teal
+                                Color(0xFF1E2E4F), // Navy
                               ],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF6B73FF).withOpacity(0.4),
+                                color: const Color(0xFF69B39C).withOpacity(0.4),
                                 blurRadius: 15,
                                 offset: const Offset(0, 8),
                               )

@@ -4,10 +4,13 @@ import '../widgets/common_widgets.dart';
 import '../providers/expense_provider.dart';
 import '../providers/theme_provider.dart';
 import '../models/expense.dart';
+import '../utils/constants.dart'; // Import CategoryConstants
 import 'add_expense_page.dart';
 import 'debt_screen.dart';
 import 'profile_screen.dart';
 import 'home_dashboard.dart';
+import 'analytics_screen.dart';
+import '../l10n/app_localizations.dart'; // Import localization
 
 class ExpensesListPage extends StatefulWidget {
   const ExpensesListPage({super.key});
@@ -16,22 +19,8 @@ class ExpensesListPage extends StatefulWidget {
 }
 
 class _ExpensesListPageState extends State<ExpensesListPage> {
-  final Map<String, IconData> categoryIcons = const {
-    'Food': Icons.fastfood,
-    'Travel': Icons.directions_car,
-    'Bills': Icons.receipt,
-    'Shopping': Icons.shopping_cart,
-    'Entertainment': Icons.movie,
-  };
-
-  final Map<String, Color> categoryColors = {
-    'Food': Colors.orange,
-    'Travel': Colors.blue,
-    'Bills': Colors.yellow.shade700,
-    'Shopping': Colors.purple,
-    'Entertainment': Colors.redAccent,
-  };
-
+  List<String> _selectedCategories = []; // State for selected categories in filter
+  
   @override
   void initState() {
     super.initState();
@@ -41,67 +30,77 @@ class _ExpensesListPageState extends State<ExpensesListPage> {
   }
 
   void _showFilterModal() {
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).cardColor, // Use theme color
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
       builder: (context) {
-        return Container(
-          padding: const EdgeInsets.all(20),
-          height: 250,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Filter Expenses',
-                  style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.teal)),
-              const SizedBox(height: 20),
-              Wrap(
-                spacing: 15,
-                children: const [
-                  FilterChip(
-                    label: Text('Food'),
-                    selected: true,
-                    onSelected: null,
-                    backgroundColor: Color(0xFFFFE0B2),
-                    selectedColor: Color(0xFFFFCC80),
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setStateModal) {
+            return Container(
+              padding: const EdgeInsets.all(20),
+              height: 350, // Increased height for more categories
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(l10n.filterExpenses, // Localized
+                      style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : const Color(0xFF1E2E4F))), // Navy
+                  const SizedBox(height: 20),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Wrap(
+                        spacing: 10,
+                        runSpacing: 8,
+                        children: CategoryConstants.icons.keys.map((category) {
+                          final isSelected = _selectedCategories.contains(category);
+                          final color = CategoryConstants.getColor(category);
+                          return FilterChip(
+                            label: Text(category, style: TextStyle(color: isSelected ? Colors.white : (isDark ? Colors.grey.shade300 : Colors.black87))),
+                            selected: isSelected,
+                            onSelected: (bool selected) {
+                              setStateModal(() { // Use setStateModal for modal's state
+                                if (selected) {
+                                  _selectedCategories.add(category);
+                                } else {
+                                  _selectedCategories.remove(category);
+                                }
+                              });
+                            },
+                            checkmarkColor: Colors.white,
+                            backgroundColor: isDark ? Colors.grey.shade700 : Colors.grey.shade200,
+                            selectedColor: color, // Use category color when selected
+                          );
+                        }).toList(),
+                      ),
+                    ),
                   ),
-                  FilterChip(
-                    label: Text('Travel'),
-                    selected: true,
-                    onSelected: null,
-                    backgroundColor: Color(0xFFBBDEFB),
-                    selectedColor: Color(0xFF90CAF9),
-                  ),
-                  FilterChip(
-                    label: Text('Bills'),
-                    selected: true,
-                    onSelected: null,
-                    backgroundColor: Color(0xFFFFF59D),
-                    selectedColor: Color(0xFFFFF176),
-                  ),
-                  FilterChip(
-                    label: Text('Shopping'),
-                    selected: true,
-                    onSelected: null,
-                    backgroundColor: Color(0xFFE1BEE7),
-                    selectedColor: Color(0xFFCE93D8),
-                  ),
+                  const SizedBox(height: 20),
+                  Align(
+                    alignment: Alignment.bottomRight,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {}); // Update parent widget state to apply filter
+                        Navigator.of(context).pop();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF69B39C), // Teal
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      ),
+                      child: Text(l10n.apply), // Localized
+                    ),
+                  )
                 ],
               ),
-              const Spacer(),
-              Align(
-                alignment: Alignment.bottomRight,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Apply'),
-                ),
-              )
-            ],
-          ),
+            );
+          },
         );
       },
     );
@@ -124,44 +123,63 @@ class _ExpensesListPageState extends State<ExpensesListPage> {
   String? _tappedId;
 
   Widget _buildExpenseItem(Expense expense) {
-    final icon = categoryIcons[expense.category] ?? Icons.category;
-    final color = categoryColors[expense.category] ?? Colors.grey;
-    final dateStr = '${expense.date.day}/${expense.date.month}/${expense.date.year}';
+    // Use Constants for Icon and Color
+    final icon = CategoryConstants.getIcon(expense.category);
+    final color = CategoryConstants.getColor(expense.category);
     
+    final dateStr = '${expense.date.day}/${expense.date.month}/${expense.date.year}';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = const Color(0xFF1E2E4F); // Navy
+
     return GestureDetector(
       onTapDown: (_) => setState(() => _tappedId = expense.key.toString()),
       onTapUp: (_) => setState(() => _tappedId = null),
       onTapCancel: () => setState(() => _tappedId = null),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        margin: const EdgeInsets.symmetric(vertical: 6),
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: _tappedId == expense.key.toString() ? Colors.teal.shade50 : Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: const [
+          color: _tappedId == expense.key.toString() 
+              ? (isDark ? const Color(0xFF333333) : Colors.grey.shade100) 
+              : (isDark ? const Color(0xFF2A2A2A) : Colors.white),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isDark ? Colors.white10 : Colors.grey.shade100,
+            width: 1,
+          ),
+          boxShadow: [
             BoxShadow(
-              color: Colors.black12,
-              blurRadius: 6,
-              offset: Offset(0, 3),
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             )
           ],
         ),
         child: Row(
           children: [
-            CircleAvatar(
-              backgroundColor: color.withOpacity(0.3),
-              child: Icon(icon, color: color),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(icon, color: color, size: 24),
             ),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(expense.note,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 16)),
-                  const SizedBox(height: 4),
+                  Text(
+                    expense.note,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold, 
+                      fontSize: 16,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
                   _buildCategoryTag(expense.category, color),
                 ],
               ),
@@ -171,18 +189,28 @@ class _ExpensesListPageState extends State<ExpensesListPage> {
               children: [
                 Consumer<ThemeProvider>(
                   builder: (context, themeProvider, child) {
-                    return Text('${themeProvider.getCurrencySymbol()}${expense.amount.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 16));
+                    return Text(
+                      '${themeProvider.getCurrencySymbol()}${expense.amount.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold, 
+                        fontSize: 18,
+                        color: isDark ? Colors.white : primaryColor,
+                      ),
+                    );
                   },
                 ),
-                const SizedBox(height: 4),
-                Text(dateStr,
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                const SizedBox(height: 6),
+                Text(
+                  dateStr,
+                  style: TextStyle(
+                    color: isDark ? Colors.grey.shade500 : Colors.grey.shade700, // Darker grey for light mode
+                    fontSize: 12,
+                  ),
+                ),
               ],
             ),
             IconButton(
-              icon: const Icon(Icons.delete, color: Colors.red),
+              icon: Icon(Icons.delete_outline, color: Colors.red.shade300),
               onPressed: () => _deleteExpense(expense),
             ),
           ],
@@ -192,27 +220,28 @@ class _ExpensesListPageState extends State<ExpensesListPage> {
   }
   
   void _deleteExpense(Expense expense) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Expense'),
-        content: const Text('Are you sure you want to delete this expense?'),
+        title: Text(l10n.deleteExpense), // Localized
+        content: Text(l10n.confirmDeleteExpense), // Localized
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel), // Localized
           ),
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
               try {
                 await context.read<ExpenseProvider>().deleteExpense(expense);
-                _showSuccessSnackBar('Expense deleted successfully! 🗑️');
+                _showSuccessSnackBar(l10n.expenseDeleted); // Localized
               } catch (e) {
-                _showErrorSnackBar('Failed to delete expense. Please try again.');
+                _showErrorSnackBar('${l10n.failedToDeleteExpense} $e'); // Localized
               }
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: Text(l10n.delete, style: const TextStyle(color: Colors.red)), // Localized
           ),
         ],
       ),
@@ -255,47 +284,51 @@ class _ExpensesListPageState extends State<ExpensesListPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Consumer<ExpenseProvider>(
       builder: (context, expenseProvider, child) {
-        final expenses = expenseProvider.expenses;
+        final allExpenses = expenseProvider.expenses;
+        final filteredExpenses = _selectedCategories.isEmpty
+            ? allExpenses
+            : allExpenses.where((expense) => _selectedCategories.contains(expense.category)).toList();
         
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Your Expenses'),
-            backgroundColor: Colors.teal,
+            title: Text(l10n.yourExpenses), // Localized
+            backgroundColor: const Color(0xFF1E2E4F), // Navy
             actions: [
               IconButton(
                 icon: const Icon(Icons.filter_list_rounded),
                 onPressed: _showFilterModal,
-                tooltip: 'Filter',
+                tooltip: l10n.filter, // Localized
               )
             ],
           ),
           body: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: expenses.isEmpty
-                ? const Center(
+            child: filteredExpenses.isEmpty
+                ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.receipt_long, size: 64, color: Colors.grey),
-                        SizedBox(height: 16),
+                        Icon(Icons.receipt_long, size: 64, color: Colors.grey.shade300),
+                        const SizedBox(height: 16),
                         Text(
-                          'No expenses yet',
-                          style: TextStyle(fontSize: 18, color: Colors.grey),
+                          l10n.noExpensesYet, // Localized
+                          style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
                         ),
-                        SizedBox(height: 8),
+                        const SizedBox(height: 8),
                         Text(
-                          'Tap the + button to add your first expense',
-                          style: TextStyle(color: Colors.grey),
+                          l10n.tapToAddFirstExpense, // Localized
+                          style: TextStyle(color: Colors.grey.shade600),
                         ),
                       ],
                     ),
                   )
                 : ListView.builder(
-                    itemCount: expenses.length,
+                    itemCount: filteredExpenses.length,
                     itemBuilder: (context, index) {
-                      return _buildExpenseItem(expenses[index]);
+                      return _buildExpenseItem(filteredExpenses[index]);
                     },
                   ),
           ),
@@ -315,8 +348,9 @@ class _ExpensesListPageState extends State<ExpensesListPage> {
                 );
               }
               if (index == 3) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Analytics coming soon!')),
+                 Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => AnalyticsScreen()),
                 );
               }
               if (index == 4) {
@@ -330,7 +364,7 @@ class _ExpensesListPageState extends State<ExpensesListPage> {
           floatingActionButton: BounceFloatingButton(
             icon: Icons.add,
             onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const AddExpensePage()),
+              TransparentRoute(builder: (_) => const AddExpensePage()),
             ),
           ),
         );

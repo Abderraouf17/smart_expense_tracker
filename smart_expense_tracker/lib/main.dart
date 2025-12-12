@@ -13,6 +13,7 @@ import 'providers/expense_provider.dart';
 import 'providers/debt_provider.dart';
 import 'providers/theme_provider.dart';
 import 'widgets/auth_gate.dart';
+import 'screens/splash_screen.dart';
 
 // Entry point
 void main() async {
@@ -75,7 +76,7 @@ class ExpenseTrackerApp extends StatelessWidget {
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
           return MaterialApp(
-            title: 'Expense Tracker',
+            title: 'Trackit',
             debugShowCheckedModeBanner: false,
             localizationsDelegates: const [
               AppLocalizations.delegate,
@@ -86,24 +87,35 @@ class ExpenseTrackerApp extends StatelessWidget {
             supportedLocales: AppLocalizations.supportedLocales,
             locale: Locale(themeProvider.language),
             theme: ThemeData(
+              useMaterial3: true,
               brightness: Brightness.light,
-              primarySwatch: Colors.teal,
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: const Color(0xFF1E2E4F),
+                primary: const Color(0xFF1E2E4F),
+                secondary: const Color(0xFF69B39C),
+              ),
               scaffoldBackgroundColor: Colors.grey.shade50,
               cardColor: Colors.white,
               appBarTheme: const AppBarTheme(
-                backgroundColor: Colors.teal,
+                backgroundColor: Color(0xFF1E2E4F),
                 foregroundColor: Colors.white,
                 elevation: 0,
               ),
               textTheme: GoogleFonts.poppinsTextTheme().apply(
-                bodyColor: Colors.grey.shade800,
-                displayColor: Colors.grey.shade900,
+                bodyColor: const Color(0xFF1E2E4F),
+                displayColor: const Color(0xFF1E2E4F),
               ),
               visualDensity: VisualDensity.adaptivePlatformDensity,
             ),
             darkTheme: ThemeData(
+              useMaterial3: true,
               brightness: Brightness.dark,
-              primarySwatch: Colors.teal,
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: const Color(0xFF1E2E4F),
+                brightness: Brightness.dark,
+                primary: const Color(0xFF69B39C), // Use accent as primary in dark mode for visibility
+                surface: const Color(0xFF1E2E4F),
+              ),
               scaffoldBackgroundColor: const Color(0xFF121212),
               cardColor: const Color(0xFF1E1E1E),
               appBarTheme: const AppBarTheme(
@@ -117,13 +129,13 @@ class ExpenseTrackerApp extends StatelessWidget {
               ),
               bottomNavigationBarTheme: const BottomNavigationBarThemeData(
                 backgroundColor: Color(0xFF1E1E1E),
-                selectedItemColor: Colors.teal,
+                selectedItemColor: Color(0xFF69B39C),
                 unselectedItemColor: Colors.grey,
               ),
               visualDensity: VisualDensity.adaptivePlatformDensity,
             ),
             themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
-            home: const AuthGate(),
+            home: const SplashScreen(),
           );
         },
       ),
