@@ -28,6 +28,138 @@ class _DebtScreenState extends State<DebtScreen> {
     });
   }
 
+  void _showPersonMenu(person) {
+    final balance = context.read<DebtProvider>().getPersonBalance(person.key.toString());
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xFF2A2A2A)
+          : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit, color: Color(0xFF69B39C)),
+              title: const Text('Edit Person'),
+              onTap: () {
+                Navigator.pop(context);
+                _showEditPersonDialog(person);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.delete, color: Colors.red.shade400),
+              title: const Text('Delete Person'),
+              onTap: () {
+                Navigator.pop(context);
+                _confirmDeletePerson(person, balance);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditPersonDialog(person) {
+    final nameController = TextEditingController(text: person.name);
+    final phoneController = TextEditingController(text: person.phoneNumber);
+    
+    showDialog(
+      context: context,
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return AlertDialog(
+          title: const Text('Edit Person'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(
+                  labelText: 'Name',
+                  prefixIcon: const Icon(Icons.person),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  filled: true,
+                  fillColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade50,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: phoneController,
+                decoration: InputDecoration(
+                  labelText: 'Phone Number',
+                  prefixIcon: const Icon(Icons.phone),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  filled: true,
+                  fillColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade50,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                person.name = nameController.text.trim();
+                person.phoneNumber = phoneController.text.trim();
+                await context.read<DebtProvider>().updatePerson(person);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Person updated successfully'), backgroundColor: Colors.green),
+                );
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF69B39C)),
+              child: const Text('Save', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _confirmDeletePerson(person, double balance) {
+    final hasOutstanding = balance != 0;
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Person'),
+        content: hasOutstanding
+            ? Text(
+                'This person has an outstanding balance of ${balance.abs().toStringAsFixed(2)}. '
+                '${balance > 0 ? "They still owe you" : "You still owe them"}. '
+                'Deleting will remove all debt records. Are you sure?',
+              )
+            : Text('Are you sure you want to delete ${person.name}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await context.read<DebtProvider>().deletePerson(person);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Person deleted'), backgroundColor: Colors.green),
+              );
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showAddOptions() {
     showModalBottomSheet(
       context: context,
@@ -200,24 +332,33 @@ class _DebtScreenState extends State<DebtScreen> {
                                     color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
                                   ),
                                 ),
-                                trailing: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Text(
-                                      '$currencySymbol${balance.abs().toStringAsFixed(2)}',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                        color: balance > 0 ? Colors.red.shade400 : const Color(0xFF69B39C),
-                                      ),
+                                    Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      children: [
+                                        Text(
+                                          '$currencySymbol${balance.abs().toStringAsFixed(2)}',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                            color: balance > 0 ? Colors.red.shade400 : const Color(0xFF69B39C),
+                                          ),
+                                        ),
+                                        Text(
+                                          balance > 0 ? l10n.owesYou : l10n.youOwe,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: isDark ? Colors.grey.shade500 : Colors.grey.shade700,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    Text(
-                                      balance > 0 ? l10n.owesYou : l10n.youOwe,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: isDark ? Colors.grey.shade500 : Colors.grey.shade700,
-                                      ),
+                                    IconButton(
+                                      icon: Icon(Icons.more_vert, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                                      onPressed: () => _showPersonMenu(person),
                                     ),
                                   ],
                                 ),

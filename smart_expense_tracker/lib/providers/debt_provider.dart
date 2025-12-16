@@ -61,6 +61,28 @@ class DebtProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> updatePerson(Person person) async {
+    await person.save();
+    await loadData();
+  }
+
+  Future<void> deletePerson(Person person) async {
+    // Delete all associated debt records
+    final personRecords = getRecordsForPerson(person.key.toString());
+    for (final record in personRecords) {
+      await record.delete();
+    }
+    // Delete the person
+    await person.delete();
+    await loadData();
+  }
+
+  Future<void> markRecordAsPaid(DebtRecord record) async {
+    record.isPaid = true;
+    await record.save();
+    await loadData();
+  }
+
   List<DebtRecord> getRecordsForPerson(String personId) {
     return _debtRecords
         .where((record) => record.personId == personId)

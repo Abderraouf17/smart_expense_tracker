@@ -27,12 +27,14 @@ class _PersonDetailScreenState extends State<PersonDetailScreen> {
   }
 
   void _markAsPaid(DebtRecord record) {
+    if (record.isPaid) return; // Already paid, do nothing
+    
     final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l10n.markAsPaid),
-        content: Text(l10n.confirmMarkAsPaid(record.amount)), // Pass amount for dynamic content
+        content: Text(l10n.confirmMarkAsPaid(record.amount)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -41,14 +43,7 @@ class _PersonDetailScreenState extends State<PersonDetailScreen> {
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
-              final paybackRecord = DebtRecord(
-                amount: record.amount,
-                type: 'payback',
-                date: DateTime.now(),
-                note: l10n.paybackFor(record.note), // Localize note
-                personId: widget.person.key.toString(),
-              );
-              await context.read<DebtProvider>().addDebtRecord(paybackRecord);
+              await context.read<DebtProvider>().markRecordAsPaid(record);
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -160,57 +155,97 @@ class _PersonDetailScreenState extends State<PersonDetailScreen> {
                         itemBuilder: (context, index) {
                           final record = records[index];
                           final isDebt = record.type == 'debt';
+                          final isPaid = record.isPaid;
                           
                           return GestureDetector(
-                            onTap: isDebt ? () => _markAsPaid(record) : null,
-                            child: Container(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              decoration: BoxDecoration(
-                                color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: isDark ? Colors.white10 : Colors.grey.shade200,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.05),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
+                            onTap: (isDebt && !isPaid) ? () => _markAsPaid(record) : null,
+                            child: Opacity(
+                              opacity: isPaid ? 0.5 : 1.0,
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: isPaid
+                                        ? (isDark ? Colors.green.shade800 : Colors.green.shade200)
+                                        : (isDark ? Colors.white10 : Colors.grey.shade200),
+                                    width: isPaid ? 2 : 1,
                                   ),
-                                ],
-                              ),
-                              child: ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: isDebt ? Colors.red.withOpacity(0.1) : Colors.green.withOpacity(0.1),
-                                  child: Icon(
-                                    isDebt ? Icons.arrow_upward : Icons.arrow_downward,
-                                    color: isDebt ? Colors.red : Colors.green,
-                                  ),
-                                ),
-                                title: Text(
-                                  '$currencySymbol${record.amount.toStringAsFixed(2)}',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: isDark ? Colors.white : Colors.black87,
-                                  ),
-                                ),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      isDebt ? l10n.debtTapToPay : l10n.payback, // Localized
-                                      style: TextStyle(
-                                        color: isDebt ? Colors.red : Colors.green,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 12,
-                                      ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.05),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
                                     ),
-                                    if (record.note.isNotEmpty) Text(record.note, style: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey.shade700)),
                                   ],
                                 ),
-                                trailing: Text(
-                                  '${record.date.day}/${record.date.month}/${record.date.year}',
-                                  style: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey.shade700),
+                                child: ListTile(
+                                  leading: CircleAvatar(
+                                    backgroundColor: isPaid
+                                        ? Colors.green.withOpacity(0.2)
+                                        : (isDebt ? Colors.red.withOpacity(0.1) : Colors.green.withOpacity(0.1)),
+                                    child: Icon(
+                                      isPaid
+                                          ? Icons.check_circle
+                                          : (isDebt ? Icons.arrow_upward : Icons.arrow_downward),
+                                      color: isPaid
+                                          ? Colors.green
+                                          : (isDebt ? Colors.red : Colors.green),
+                                    ),
+                                  ),
+                                  title: Row(
+                                    children: [
+                                      Text(
+                                        '$currencySymbol${record.amount.toStringAsFixed(2)}',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: isDark ? Colors.white : Colors.black87,
+                                          decoration: isPaid ? TextDecoration.lineThrough : null,
+                                        ),
+                                      ),
+                                      if (isPaid) ...[
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: Colors.green.withOpacity(0.2),
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: const Text(
+                                            'PAID',
+                                            style: TextStyle(
+                                              color: Colors.green,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                  subtitle: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        isPaid
+                                            ? 'Paid'
+                                            : (isDebt ? l10n.debtTapToPay : l10n.payback),
+                                        style: TextStyle(
+                                          color: isPaid
+                                              ? Colors.green
+                                              : (isDebt ? Colors.red : Colors.green),
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                      if (record.note.isNotEmpty) Text(record.note, style: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey.shade700)),
+                                    ],
+                                  ),
+                                  trailing: Text(
+                                    '${record.date.day}/${record.date.month}/${record.date.year}',
+                                    style: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey.shade700),
+                                  ),
                                 ),
                               ),
                             ),

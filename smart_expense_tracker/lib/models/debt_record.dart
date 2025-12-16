@@ -22,6 +22,9 @@ class DebtRecord extends HiveObject {
   @HiveField(5)
   String userId;
 
+  @HiveField(6)
+  bool isPaid;
+
   DebtRecord({
     required this.amount,
     required this.type,
@@ -29,5 +32,6 @@ class DebtRecord extends HiveObject {
     required this.note,
     required this.personId,
     this.userId = '',
+    this.isPaid = false,
   });
 }

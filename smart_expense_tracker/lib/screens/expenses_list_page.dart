@@ -20,6 +20,7 @@ class ExpensesListPage extends StatefulWidget {
 
 class _ExpensesListPageState extends State<ExpensesListPage> {
   List<String> _selectedCategories = []; // State for selected categories in filter
+  String _sortBy = 'date'; // Default sort: 'date', 'amountHigh', 'amountLow'
   
   @override
   void initState() {
@@ -33,25 +34,105 @@ class _ExpensesListPageState extends State<ExpensesListPage> {
     final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
-      backgroundColor: Theme.of(context).cardColor, // Use theme color
+      backgroundColor: Theme.of(context).cardColor,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
+      isScrollControlled: true,
       builder: (context) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setStateModal) {
             return Container(
               padding: const EdgeInsets.all(20),
-              height: 350, // Increased height for more categories
+              height: MediaQuery.of(context).size.height * 0.7,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(l10n.filterExpenses, // Localized
-                      style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : const Color(0xFF1E2E4F))), // Navy
+                  Text(
+                    l10n.filterExpenses,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : const Color(0xFF1E2E4F),
+                    ),
+                  ),
                   const SizedBox(height: 20),
+                  
+                  // Sort By Section
+                  Text(
+                    'Sort By',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white70 : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.black12 : Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        RadioListTile<String>(
+                          title: const Text('Date (Newest First)'),
+                          value: 'date',
+                          groupValue: _sortBy,
+                          onChanged: (value) {
+                            setStateModal(() => _sortBy = value!);
+                          },
+                          activeColor: const Color(0xFF69B39C),
+                        ),
+                        RadioListTile<String>(
+                          title: const Text('Amount (High to Low)'),
+                          value: 'amountHigh',
+                          groupValue: _sortBy,
+                          onChanged: (value) {
+                            setStateModal(() => _sortBy = value!);
+                          },
+                          activeColor: const Color(0xFF69B39C),
+                        ),
+                        RadioListTile<String>(
+                          title: const Text('Amount (Low to High)'),
+                          value: 'amountLow',
+                          groupValue: _sortBy,
+                          onChanged: (value) {
+                            setStateModal(() => _sortBy = value!);
+                          },
+                          activeColor: const Color(0xFF69B39C),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  
+                  // Filter by Category Section
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Filter by Category',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white70 : Colors.black87,
+                        ),
+                      ),
+                      if (_selectedCategories.isNotEmpty)
+                        TextButton(
+                          onPressed: () {
+                            setStateModal(() => _selectedCategories.clear());
+                          },
+                          child: const Text(
+                            'Clear',
+                            style: TextStyle(color: Color(0xFF69B39C)),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
                   Expanded(
                     child: SingleChildScrollView(
                       child: Wrap(
@@ -61,10 +142,15 @@ class _ExpensesListPageState extends State<ExpensesListPage> {
                           final isSelected = _selectedCategories.contains(category);
                           final color = CategoryConstants.getColor(category);
                           return FilterChip(
-                            label: Text(category, style: TextStyle(color: isSelected ? Colors.white : (isDark ? Colors.grey.shade300 : Colors.black87))),
+                            label: Text(
+                              category,
+                              style: TextStyle(
+                                color: isSelected ? Colors.white : (isDark ? Colors.grey.shade300 : Colors.black87),
+                              ),
+                            ),
                             selected: isSelected,
                             onSelected: (bool selected) {
-                              setStateModal(() { // Use setStateModal for modal's state
+                              setStateModal(() {
                                 if (selected) {
                                   _selectedCategories.add(category);
                                 } else {
@@ -74,29 +160,45 @@ class _ExpensesListPageState extends State<ExpensesListPage> {
                             },
                             checkmarkColor: Colors.white,
                             backgroundColor: isDark ? Colors.grey.shade700 : Colors.grey.shade200,
-                            selectedColor: color, // Use category color when selected
+                            selectedColor: color,
                           );
                         }).toList(),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  Align(
-                    alignment: Alignment.bottomRight,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        setState(() {}); // Update parent widget state to apply filter
-                        Navigator.of(context).pop();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF69B39C), // Teal
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          setStateModal(() {
+                            _sortBy = 'date';
+                            _selectedCategories.clear();
+                          });
+                        },
+                        child: Text(
+                          'Reset All',
+                          style: TextStyle(
+                            color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                          ),
+                        ),
                       ),
-                      child: Text(l10n.apply), // Localized
-                    ),
-                  )
+                      ElevatedButton(
+                        onPressed: () {
+                          setState(() {}); // Update parent widget state
+                          Navigator.of(context).pop();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF69B39C),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        ),
+                        child: Text(l10n.apply),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             );
@@ -123,26 +225,57 @@ class _ExpensesListPageState extends State<ExpensesListPage> {
   String? _tappedId;
 
   Widget _buildExpenseItem(Expense expense) {
-    // Use Constants for Icon and Color
     final icon = CategoryConstants.getIcon(expense.category);
     final color = CategoryConstants.getColor(expense.category);
     
     final dateStr = '${expense.date.day}/${expense.date.month}/${expense.date.year}';
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = const Color(0xFF1E2E4F); // Navy
+    final primaryColor = const Color(0xFF1E2E4F);
 
     return GestureDetector(
-      onTapDown: (_) => setState(() => _tappedId = expense.key.toString()),
-      onTapUp: (_) => setState(() => _tappedId = null),
-      onTapCancel: () => setState(() => _tappedId = null),
+      onLongPress: () {
+        showModalBottomSheet(
+          context: context,
+          backgroundColor: isDark ? const Color(0xFF2A2A2A) : Colors.white,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          builder: (context) => Container(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.edit, color: Color(0xFF69B39C)),
+                  title: const Text('Edit'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.of(context).push(
+                      TransparentRoute(
+                        builder: (_) => AddExpensePage(expense: expense),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: Icon(Icons.delete, color: Colors.red.shade400),
+                  title: const Text('Delete'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _deleteExpense(expense);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         margin: const EdgeInsets.symmetric(vertical: 8),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: _tappedId == expense.key.toString() 
-              ? (isDark ? const Color(0xFF333333) : Colors.grey.shade100) 
-              : (isDark ? const Color(0xFF2A2A2A) : Colors.white),
+          color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isDark ? Colors.white10 : Colors.grey.shade100,
@@ -203,15 +336,11 @@ class _ExpensesListPageState extends State<ExpensesListPage> {
                 Text(
                   dateStr,
                   style: TextStyle(
-                    color: isDark ? Colors.grey.shade500 : Colors.grey.shade700, // Darker grey for light mode
+                    color: isDark ? Colors.grey.shade500 : Colors.grey.shade700,
                     fontSize: 12,
                   ),
                 ),
               ],
-            ),
-            IconButton(
-              icon: Icon(Icons.delete_outline, color: Colors.red.shade300),
-              onPressed: () => _deleteExpense(expense),
             ),
           ],
         ),
@@ -288,9 +417,23 @@ class _ExpensesListPageState extends State<ExpensesListPage> {
     return Consumer<ExpenseProvider>(
       builder: (context, expenseProvider, child) {
         final allExpenses = expenseProvider.expenses;
-        final filteredExpenses = _selectedCategories.isEmpty
+        var filteredExpenses = _selectedCategories.isEmpty
             ? allExpenses
             : allExpenses.where((expense) => _selectedCategories.contains(expense.category)).toList();
+        
+        // Sort expenses based on selected sort option
+        switch (_sortBy) {
+          case 'amountHigh':
+            filteredExpenses.sort((a, b) => b.amount.compareTo(a.amount));
+            break;
+          case 'amountLow':
+            filteredExpenses.sort((a, b) => a.amount.compareTo(b.amount));
+            break;
+          case 'date':
+          default:
+            filteredExpenses.sort((a, b) => b.date.compareTo(a.date));
+            break;
+        }
         
         return Scaffold(
           appBar: AppBar(

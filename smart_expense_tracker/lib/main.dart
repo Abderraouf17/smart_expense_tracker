@@ -9,6 +9,7 @@ import 'firebase_options.dart';
 import 'models/expense.dart';
 import 'models/person.dart';
 import 'models/debt_record.dart';
+import 'models/income_source.dart';
 import 'providers/expense_provider.dart';
 import 'providers/debt_provider.dart';
 import 'providers/theme_provider.dart';
@@ -31,6 +32,7 @@ void main() async {
   Hive.registerAdapter(ExpenseAdapter());
   Hive.registerAdapter(PersonAdapter());
   Hive.registerAdapter(DebtRecordAdapter());
+  Hive.registerAdapter(IncomeSourceAdapter());
   
   // Open Hive boxes with error handling
   try {
@@ -59,6 +61,13 @@ void main() async {
   } catch (e) {
     await Hive.deleteBoxFromDisk('settings');
     await Hive.openBox('settings');
+  }
+  
+  try {
+    await Hive.openBox<IncomeSource>('income_sources');
+  } catch (e) {
+    await Hive.deleteBoxFromDisk('income_sources');
+    await Hive.openBox<IncomeSource>('income_sources');
   }
   
   runApp(ExpenseTrackerApp());

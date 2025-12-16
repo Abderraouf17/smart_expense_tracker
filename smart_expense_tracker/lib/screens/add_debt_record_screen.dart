@@ -5,6 +5,7 @@ import '../providers/debt_provider.dart';
 import '../models/debt_record.dart';
 import '../models/person.dart';
 import '../widgets/common_widgets.dart';
+import 'add_person_screen.dart';
 
 class AddDebtRecordScreen extends StatefulWidget {
   final Person? selectedPerson;
@@ -117,6 +118,7 @@ class _AddDebtRecordScreenState extends State<AddDebtRecordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Stack(
@@ -140,7 +142,7 @@ class _AddDebtRecordScreenState extends State<AddDebtRecordScreen> {
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [Color(0xFF1E2E4F), Color(0xFF69B39C)], // Navy to Teal
+                    colors: [Color(0xFF1E2E4F), Color(0xFF69B39C)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -172,57 +174,148 @@ class _AddDebtRecordScreenState extends State<AddDebtRecordScreen> {
                       ),
                       const SizedBox(height: 20),
                       // Person Selection
-                      if (_selectedPerson == null)
-                        Consumer<DebtProvider>(
-                          builder: (context, debtProvider, child) {
-                            return DropdownButtonFormField<Person>(
-                              decoration: InputDecoration(
-                                labelText: 'Select Person',
-                                filled: true,
-                                fillColor: Colors.white,
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(25)),
-                                prefixIcon: const Icon(Icons.person),
-                              ),
-                              value: _selectedPerson,
-                              items: debtProvider.people
-                                  .map((person) => DropdownMenuItem(
-                                        value: person,
-                                        child: Text(person.name),
-                                      ))
-                                  .toList(),
-                              onChanged: (person) => setState(() => _selectedPerson = person),
-                            );
-                          },
-                        )
-                      else
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(25),
-                          ),
-                          child: Row(
+                      Consumer<DebtProvider>(
+                        builder: (context, debtProvider, child) {
+                          final hasPeople = debtProvider.people.isNotEmpty;
+                          return Column(
                             children: [
-                              const Icon(Icons.person),
-                              const SizedBox(width: 16),
-                              Text(_selectedPerson!.name, style: const TextStyle(fontSize: 16)),
+                              if (!hasPeople)
+                                GestureDetector(
+                                  onTap: () async {
+                                    await Navigator.push(
+                                      context,
+                                      TransparentRoute(builder: (_) => const AddPersonScreen()),
+                                    );
+                                    // Reload and auto-select the newly added person
+                                    if (mounted) {
+                                      await debtProvider.loadData();
+                                      if (debtProvider.people.isNotEmpty) {
+                                        setState(() => _selectedPerson = debtProvider.people.last);
+                                      }
+                                    }
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(25),
+                                      border: Border.all(color: const Color(0xFF69B39C), width: 2),
+                                    ),
+                                    child: const Row(
+                                      children: [
+                                        Icon(Icons.person_add, color: Color(0xFF69B39C)),
+                                        SizedBox(width: 16),
+                                        Text(
+                                          'Add New Person',
+                                          style: TextStyle(fontSize: 16, color: Color(0xFF69B39C), fontWeight: FontWeight.bold),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              if (hasPeople)
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: DropdownButtonFormField<Person>(
+                                        decoration: InputDecoration(
+                                          labelText: 'Select Person',
+                                          labelStyle: const TextStyle(color: Colors.white70),
+                                          filled: true,
+                                          fillColor: Colors.white.withOpacity(0.1),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(25),
+                                            borderSide: const BorderSide(color: Colors.white30),
+                                          ),
+                                          enabledBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(25),
+                                            borderSide: const BorderSide(color: Colors.white30),
+                                          ),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(25),
+                                            borderSide: const BorderSide(color: Colors.white, width: 2),
+                                          ),
+                                          prefixIcon: const Icon(Icons.person, color: Colors.white70),
+                                        ),
+                                        dropdownColor: const Color(0xFF2A2A3A),
+                                        style: const TextStyle(color: Colors.white, fontSize: 16),
+                                        value: _selectedPerson,
+                                        items: debtProvider.people.map((person) => DropdownMenuItem<Person>(
+                                              value: person,
+                                              child: Text(person.name),
+                                            )).toList(),
+                                        onChanged: (person) {
+                                          setState(() => _selectedPerson = person);
+                                        },
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(15),
+                                        border: Border.all(color: const Color(0xFF69B39C), width: 2),
+                                      ),
+                                      child: IconButton(
+                                        onPressed: () async {
+                                          await Navigator.push(
+                                            context,
+                                            TransparentRoute(builder: (_) => const AddPersonScreen()),
+                                          );
+                                          // Reload and auto-select the newly added person
+                                          if (mounted) {
+                                            await debtProvider.loadData();
+                                            if (debtProvider.people.isNotEmpty) {
+                                              setState(() => _selectedPerson = debtProvider.people.last);
+                                            }
+                                          }
+                                        },
+                                        icon: const Icon(Icons.person_add, color: Color(0xFF69B39C)),
+                                        iconSize: 26,
+                                        tooltip: 'Add New Person',
+                                        padding: const EdgeInsets.all(8),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                             ],
-                          ),
-                        ),
+                          );
+                        },
+                      ),
                       const SizedBox(height: 16),
-                      AnimatedInputField(
-                        labelText: 'Amount',
+                      const SizedBox(height: 16),
+                      TextField(
                         controller: _amountController,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        prefixIcon: const Icon(Icons.attach_money, color: Colors.white70),
+                        style: const TextStyle(color: Colors.white, fontSize: 16),
+                        decoration: InputDecoration(
+                          labelText: 'Amount',
+                          labelStyle: const TextStyle(color: Colors.white70),
+                          prefixIcon: const Icon(Icons.attach_money, color: Colors.white70),
+                          filled: true,
+                          fillColor: Colors.white.withOpacity(0.1),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(25),
+                            borderSide: const BorderSide(color: Colors.white30),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(25),
+                            borderSide: const BorderSide(color: Colors.white30),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(25),
+                            borderSide: const BorderSide(color: Colors.white, width: 2),
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 16),
                       // Record Type Selection
                       Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Colors.white.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(25),
+                          border: Border.all(color: Colors.white30),
                         ),
                         child: Row(
                           children: [
@@ -239,7 +332,7 @@ class _AddDebtRecordScreenState extends State<AddDebtRecordScreen> {
                                     'Debt',
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
-                                      color: _recordType == 'debt' ? Colors.white : Colors.black,
+                                      color: Colors.white,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -255,11 +348,11 @@ class _AddDebtRecordScreenState extends State<AddDebtRecordScreen> {
                                     color: _recordType == 'payback' ? Colors.green.shade400 : Colors.transparent,
                                     borderRadius: BorderRadius.circular(20),
                                   ),
-                                  child: Text(
+                                  child: const Text(
                                     'Payback',
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
-                                      color: _recordType == 'payback' ? Colors.white : Colors.black,
+                                      color: Colors.white,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -274,25 +367,47 @@ class _AddDebtRecordScreenState extends State<AddDebtRecordScreen> {
                       GestureDetector(
                         onTap: _selectDate,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: Colors.white.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(25),
+                            border: Border.all(color: Colors.white30),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.calendar_today),
+                              const Icon(Icons.calendar_today, color: Colors.white70),
                               const SizedBox(width: 16),
-                              Text('${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}'),
+                              Text(
+                                '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                                style: const TextStyle(color: Colors.white, fontSize: 16),
+                              ),
                             ],
                           ),
                         ),
                       ),
                       const SizedBox(height: 16),
-                      AnimatedInputField(
-                        labelText: 'Note (optional)',
+                      TextField(
                         controller: _noteController,
-                        prefixIcon: const Icon(Icons.note, color: Colors.white70),
+                        style: const TextStyle(color: Colors.white, fontSize: 16),
+                        decoration: InputDecoration(
+                          labelText: 'Note (optional)',
+                          labelStyle: const TextStyle(color: Colors.white70),
+                          prefixIcon: const Icon(Icons.note, color: Colors.white70),
+                          filled: true,
+                          fillColor: Colors.white.withOpacity(0.1),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(25),
+                            borderSide: const BorderSide(color: Colors.white30),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(25),
+                            borderSide: const BorderSide(color: Colors.white30),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(25),
+                            borderSide: const BorderSide(color: Colors.white, width: 2),
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 24),
                       Row(
@@ -309,11 +424,11 @@ class _AddDebtRecordScreenState extends State<AddDebtRecordScreen> {
                           ),
                           const SizedBox(width: 16),
                           Expanded(
-                            child: GradientButton(
-                              text: 'Save',
-                              gradient: const LinearGradient(
-                                colors: [Colors.white24, Colors.white10],
-                              ),
+                              child: GradientButton(
+                                text: 'Save',
+                                gradient: LinearGradient(
+                                  colors: [Colors.white.withOpacity(0.3), Colors.white.withOpacity(0.1)],
+                                ),
                               onPressed: _saveRecord,
                               borderRadius: 25,
                             ),

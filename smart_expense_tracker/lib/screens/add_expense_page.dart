@@ -1,4 +1,4 @@
-import 'dart:ui'; // Ensure this import is present
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -6,10 +6,12 @@ import '../widgets/common_widgets.dart';
 import '../providers/expense_provider.dart';
 import '../models/expense.dart';
 import '../utils/constants.dart';
-import '../l10n/app_localizations.dart'; // Import localization
+import '../l10n/app_localizations.dart';
 
 class AddExpensePage extends StatefulWidget {
-  const AddExpensePage({super.key});
+  final Expense? expense; // For editing
+
+  const AddExpensePage({super.key, this.expense});
 
   @override
   State<AddExpensePage> createState() => _AddExpensePageState();
@@ -21,7 +23,9 @@ class _AddExpensePageState extends State<AddExpensePage>
   final _notesController = TextEditingController();
 
   String? _selectedCategory;
+  DateTime _selectedDate = DateTime.now();
   bool _isLoading = false;
+  bool get _isEditing => widget.expense != null;
 
   late AnimationController _modalController;
   late Animation<double> _scaleAnimation;
@@ -34,6 +38,14 @@ class _AddExpensePageState extends State<AddExpensePage>
     _scaleAnimation =
         CurvedAnimation(parent: _modalController, curve: Curves.easeOutBack);
     _modalController.forward();
+    
+    // Load existing expense data if editing
+    if (_isEditing) {
+      _amountController.text = widget.expense!.amount.toStringAsFixed(2);
+      _notesController.text = widget.expense!.note;
+      _selectedCategory = widget.expense!.category;
+      _selectedDate = widget.expense!.date;
+    }
   }
 
   @override
@@ -42,6 +54,18 @@ class _AddExpensePageState extends State<AddExpensePage>
     _notesController.dispose();
     _modalController.dispose();
     super.dispose();
+  }
+
+  Future<void> _selectDate() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+    );
+    if (date != null) {
+      setState(() => _selectedDate = date);
+    }
   }
 
   void _saveExpense() async {
@@ -62,18 +86,30 @@ class _AddExpensePageState extends State<AddExpensePage>
     
     setState(() => _isLoading = true);
     
-    final expense = Expense(
-      amount: amount,
-      category: _selectedCategory!,
-      note: notes.isEmpty ? _selectedCategory! : notes,
-      date: DateTime.now(),
-      currency: 'SAR', // Use default SAR
-    );
-    
     try {
-      await context.read<ExpenseProvider>().addExpense(expense);
-      if (!mounted) return;
-      _showSuccessSnackBar(l10n.expenseAdded);
+      if (_isEditing) {
+        // Update existing expense
+        widget.expense!.amount = amount;
+        widget.expense!.category = _selectedCategory!;
+        widget.expense!.note = notes.isEmpty ? _selectedCategory! : notes;
+        widget.expense!.date = _selectedDate;
+        await context.read<ExpenseProvider>().updateExpense(widget.expense!);
+        if (!mounted) return;
+        _showSuccessSnackBar('Expense updated successfully');
+      } else {
+        // Add new expense
+        final expense = Expense(
+          amount: amount,
+          category: _selectedCategory!,
+          note: notes.isEmpty ? _selectedCategory! : notes,
+          date: _selectedDate,
+          currency: 'SAR',
+        );
+        await context.read<ExpenseProvider>().addExpense(expense);
+        if (!mounted) return;
+        _showSuccessSnackBar(l10n.expenseAdded);
+      }
+      
       await Future.delayed(const Duration(milliseconds: 500));
       Navigator.of(context).pop();
     } catch (e) {
@@ -126,29 +162,39 @@ class _AddExpensePageState extends State<AddExpensePage>
       children: [
         DropdownButtonFormField<String>(
           isExpanded: true,
+          style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
             labelText: l10n.category,
+            labelStyle: const TextStyle(color: Colors.white70),
             filled: true,
-            fillColor: isDark ? Colors.white.withOpacity(0.1) : Colors.white,
+            fillColor: Colors.white.withOpacity(0.1),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(25)),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(25),
+              borderSide: const BorderSide(color: Colors.white30),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(25),
+              borderSide: const BorderSide(color: Colors.white, width: 2),
+            ),
             prefixIcon: Icon(
               _selectedCategory != null
                   ? CategoryConstants.getIcon(_selectedCategory!)
                   : Icons.category_outlined,
               color: _selectedCategory != null
                   ? CategoryConstants.getColor(_selectedCategory!)
-                  : Colors.grey,
+                  : Colors.white70,
             ),
           ),
           value: _selectedCategory,
-          dropdownColor: isDark ? const Color(0xFF2A2A2A) : Colors.white,
+          dropdownColor: const Color(0xFF1E2E4F),
           items: CategoryConstants.icons.keys
               .map((category) => DropdownMenuItem(
                     value: category,
                     child: Text(
                       category,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                      style: const TextStyle(color: Colors.white),
                     ),
                   ))
               .toList(),
@@ -163,7 +209,7 @@ class _AddExpensePageState extends State<AddExpensePage>
           height: 120,
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: isDark ? Colors.white.withOpacity(0.05) : Colors.white.withOpacity(0.1),
+            color: Colors.white.withOpacity(0.05),
             borderRadius: BorderRadius.circular(15),
           ),
           child: GridView.builder(
@@ -172,7 +218,7 @@ class _AddExpensePageState extends State<AddExpensePage>
               mainAxisSpacing: 8,
               crossAxisSpacing: 8,
             ),
-            itemCount: CategoryConstants.icons.keys.length, // Use all categories
+            itemCount: CategoryConstants.icons.keys.length,
             itemBuilder: (context, index) {
               final categoryName = CategoryConstants.icons.keys.elementAt(index);
               final icon = CategoryConstants.getIcon(categoryName);
@@ -186,11 +232,11 @@ class _AddExpensePageState extends State<AddExpensePage>
                 },
                 child: Container(
                   decoration: BoxDecoration(
-                    color: isSelected 
+                    color: isSelected
                         ? color.withOpacity(0.3)
-                        : (isDark ? Colors.white.withOpacity(0.1) : Colors.grey.shade100),
+                        : Colors.white.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: isSelected 
+                    border: isSelected
                         ? Border.all(color: color, width: 2)
                         : null,
                   ),
@@ -211,12 +257,6 @@ class _AddExpensePageState extends State<AddExpensePage>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    // Consistent Navy/Teal Gradient
-    final gradientColors = [
-      const Color(0xFF1E2E4F), // Navy
-      const Color(0xFF69B39C), // Teal
-    ];
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -246,13 +286,13 @@ class _AddExpensePageState extends State<AddExpensePage>
                   margin: const EdgeInsets.symmetric(horizontal: 20),
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: gradientColors,
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF1E2E4F), Color(0xFF69B39C)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(30),
-                    boxShadow: [
+                    boxShadow: const [
                       BoxShadow(color: Colors.black26, blurRadius: 20, offset: Offset(0, 8))
                     ],
                   ),
@@ -264,7 +304,7 @@ class _AddExpensePageState extends State<AddExpensePage>
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              l10n.addExpense,
+                              _isEditing ? 'Edit Expense' : l10n.addExpense,
                               style: const TextStyle(
                                   fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white),
                             ),
@@ -277,9 +317,9 @@ class _AddExpensePageState extends State<AddExpensePage>
                         const SizedBox(height: 20),
                         TextField(
                           controller: _amountController,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          keyboardType: TextInputType.number,
                           inputFormatters: [
-                            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                            FilteringTextInputFormatter.digitsOnly,
                           ],
                           style: const TextStyle(color: Colors.white, fontSize: 18),
                           decoration: InputDecoration(
@@ -304,6 +344,29 @@ class _AddExpensePageState extends State<AddExpensePage>
                         ),
                         const SizedBox(height: 16),
                         _buildCategoryDropdown(),
+                        const SizedBox(height: 16),
+                        // Date Picker
+                        GestureDetector(
+                          onTap: _selectDate,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(25),
+                              border: Border.all(color: Colors.white30),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.calendar_today, color: Colors.white70),
+                                const SizedBox(width: 16),
+                                Text(
+                                  '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                         const SizedBox(height: 16),
                         TextField(
                           controller: _notesController,
@@ -330,11 +393,11 @@ class _AddExpensePageState extends State<AddExpensePage>
                         ),
                         const SizedBox(height: 24),
                         GradientButton(
-                          text: _isLoading ? '${l10n.saving}...' : l10n.save,
+                          text: _isLoading ? '${l10n.saving}...' : (_isEditing ? 'Update' : l10n.save),
                           gradient: LinearGradient(
-                            colors: _isLoading 
+                            colors: _isLoading
                                 ? [Colors.grey.shade400, Colors.grey.shade600]
-                                : [Colors.white24, Colors.white10], // Subtle difference for button on gradient
+                                : [Colors.white24, Colors.white10],
                           ),
                           onPressed: _isLoading ? () {} : _saveExpense,
                           borderRadius: 25,

@@ -14,6 +14,7 @@ import 'debt_screen.dart';
 import 'analytics_screen.dart';
 import 'profile_screen.dart';
 import 'income_management_page.dart';
+import 'balance_management_page.dart';
 
 class HomeDashboard extends StatefulWidget {
   const HomeDashboard({super.key});
@@ -388,7 +389,7 @@ class _HomeDashboardState extends State<HomeDashboard>
                             child: GestureDetector(
                               onTap: () => Navigator.of(context).push(
                                 MaterialPageRoute(
-                                  builder: (_) => const IncomeManagementPage(),
+                                  builder: (_) => const BalanceManagementPage(),
                                 ),
                               ),
                               child: Container(
