@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../providers/theme_provider.dart';
 import '../l10n/app_localizations.dart';
 import 'signup_screen.dart';
+import 'forgot_password_screen.dart';
 import '../utils/constants.dart'; // Ensure this import is here
 
 class LoginScreen extends StatefulWidget {
@@ -317,6 +318,24 @@ class _LoginScreenState extends State<LoginScreen>
                       focusNode: _passwordFocus,
                       textInputAction: TextInputAction.done,
                       onSubmitted: (_) => _signIn(),
+                    ),
+                    
+                    // Forgot Password
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+                        ),
+                        child: Text(
+                          'Forgot Password?',
+                          style: TextStyle(
+                            color: isDark ? Colors.tealAccent.shade100 : const Color(0xFF1E2E4F),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
                     ),
                     
                     // Remember Me

@@ -11,6 +11,9 @@ import 'profile_screen.dart';
 import 'home_dashboard.dart';
 import 'analytics_screen.dart';
 import '../l10n/app_localizations.dart'; // Import localization
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/pdf_service.dart';
 
 class DebtScreen extends StatefulWidget {
   const DebtScreen({super.key});
@@ -206,6 +209,42 @@ class _DebtScreenState extends State<DebtScreen> {
     );
   }
 
+  Future<void> _exportPdf() async {
+    final debtProvider = context.read<DebtProvider>();
+    final people = debtProvider.people;
+    if (people.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No debt records to export.')),
+      );
+      return;
+    }
+
+    try {
+      // Get User Name
+      String userName = 'User';
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        if (doc.exists) {
+           userName = doc.data()?['name'] ?? user.email ?? 'User';
+        }
+      }
+      
+      final currencySymbol = context.read<ThemeProvider>().getCurrencySymbol();
+      
+      await PdfService.generateDebtsSummaryReport(
+        people,
+        debtProvider,
+        currencySymbol,
+        userName,
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to generate PDF: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer2<DebtProvider, ThemeProvider>(
@@ -218,6 +257,13 @@ class _DebtScreenState extends State<DebtScreen> {
           appBar: AppBar(
             title: Text(l10n.debtRecords),
             backgroundColor: const Color(0xFF1E2E4F), // Navy
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.picture_as_pdf, color: Colors.white),
+                onPressed: _exportPdf,
+                tooltip: 'Export PDF',
+              ),
+            ],
           ),
           body: Column(
             children: [

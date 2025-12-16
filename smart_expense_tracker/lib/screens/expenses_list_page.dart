@@ -11,6 +11,9 @@ import 'profile_screen.dart';
 import 'home_dashboard.dart';
 import 'analytics_screen.dart';
 import '../l10n/app_localizations.dart'; // Import localization
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/pdf_service.dart';
 
 class ExpensesListPage extends StatefulWidget {
   const ExpensesListPage({super.key});
@@ -411,6 +414,36 @@ class _ExpensesListPageState extends State<ExpensesListPage> {
     );
   }
 
+  Future<void> _exportPdf() async {
+    final expenses = context.read<ExpenseProvider>().expenses;
+    if (expenses.isEmpty) {
+      _showErrorSnackBar('No expenses to export.');
+      return;
+    }
+
+    try {
+      // Get User Name
+      String userName = 'User';
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        if (doc.exists) {
+           userName = doc.data()?['name'] ?? user.email ?? 'User';
+        }
+      }
+      
+      final currencySymbol = context.read<ThemeProvider>().getCurrencySymbol();
+      
+      await PdfService.generateExpensesReport(
+        expenses,
+        currencySymbol,
+        userName,
+      );
+    } catch (e) {
+      _showErrorSnackBar('Failed to generate PDF: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -440,6 +473,12 @@ class _ExpensesListPageState extends State<ExpensesListPage> {
             title: Text(l10n.yourExpenses), // Localized
             backgroundColor: const Color(0xFF1E2E4F), // Navy
             actions: [
+
+              IconButton(
+                icon: const Icon(Icons.picture_as_pdf, color: Colors.white),
+                onPressed: _exportPdf,
+                tooltip: 'Export PDF',
+              ),
               IconButton(
                 icon: const Icon(Icons.filter_list_rounded),
                 onPressed: _showFilterModal,

@@ -7,6 +7,7 @@ import '../models/debt_record.dart';
 import '../widgets/common_widgets.dart';
 import 'add_debt_record_screen.dart';
 import '../l10n/app_localizations.dart'; // Import localization
+import '../services/pdf_service.dart';
 
 class PersonDetailScreen extends StatefulWidget {
   final Person person;
@@ -60,6 +61,25 @@ class _PersonDetailScreenState extends State<PersonDetailScreen> {
     );
   }
 
+  Future<void> _exportPdf() async {
+    try {
+      final currencySymbol = context.read<ThemeProvider>().getCurrencySymbol();
+      final records = context.read<DebtProvider>().getRecordsForPerson(widget.person.key.toString());
+      
+      await PdfService.generatePersonReport(
+        widget.person,
+        records,
+        currencySymbol,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to generate PDF: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer2<DebtProvider, ThemeProvider>(
@@ -75,6 +95,13 @@ class _PersonDetailScreenState extends State<PersonDetailScreen> {
             title: Text(widget.person.name, style: const TextStyle(color: Colors.white)),
             backgroundColor: const Color(0xFF1E2E4F), // Navy
             iconTheme: const IconThemeData(color: Colors.white),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.picture_as_pdf),
+                onPressed: _exportPdf,
+                tooltip: 'Export PDF',
+              ),
+            ],
           ),
           body: Column(
             children: [
